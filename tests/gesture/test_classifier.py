@@ -22,3 +22,38 @@ def make_lm(positions: dict) -> list:
 
 def clf() -> GestureClassifier:
     return GestureClassifier(320, 240)
+
+
+def test_index_extended_when_tip_above_mcp():
+    c = clf()
+    lms = make_lm({INDEX_TIP: (0.5, 0.2, 0), INDEX_MCP: (0.5, 0.6, 0)})
+    assert c._finger_states(lms)['index'] is True
+
+def test_index_curled_when_tip_below_mcp():
+    c = clf()
+    lms = make_lm({INDEX_TIP: (0.5, 0.75, 0), INDEX_MCP: (0.5, 0.5, 0)})
+    assert c._finger_states(lms)['index'] is False
+
+def test_all_fingers_extended():
+    c = clf()
+    lms = make_lm({
+        THUMB_TIP: (0.8, 0.5, 0), THUMB_IP: (0.6, 0.5, 0),
+        INDEX_TIP: (0.5, 0.1, 0), INDEX_MCP: (0.5, 0.5, 0),
+        MIDDLE_TIP: (0.5, 0.1, 0), MIDDLE_MCP: (0.5, 0.5, 0),
+        RING_TIP: (0.5, 0.1, 0), RING_MCP: (0.5, 0.5, 0),
+        PINKY_TIP: (0.5, 0.1, 0), PINKY_MCP: (0.5, 0.5, 0),
+    })
+    states = c._finger_states(lms)
+    assert all(states.values())
+
+def test_fist_all_curled():
+    c = clf()
+    lms = make_lm({
+        THUMB_TIP: (0.5, 0.5, 0), THUMB_IP: (0.6, 0.5, 0),
+        INDEX_TIP: (0.5, 0.75, 0), INDEX_MCP: (0.5, 0.5, 0),
+        MIDDLE_TIP: (0.5, 0.75, 0), MIDDLE_MCP: (0.5, 0.5, 0),
+        RING_TIP: (0.5, 0.75, 0), RING_MCP: (0.5, 0.5, 0),
+        PINKY_TIP: (0.5, 0.75, 0), PINKY_MCP: (0.5, 0.5, 0),
+    })
+    states = c._finger_states(lms)
+    assert not any(states.values())

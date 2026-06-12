@@ -45,7 +45,13 @@ class GestureClassifier:
         raise NotImplementedError
 
     def _finger_states(self, lm: list) -> dict[str, bool]:
-        raise NotImplementedError
+        return {
+            'thumb':  lm[THUMB_TIP].x > lm[THUMB_IP].x,
+            'index':  lm[INDEX_TIP].y < lm[INDEX_MCP].y,
+            'middle': lm[MIDDLE_TIP].y < lm[MIDDLE_MCP].y,
+            'ring':   lm[RING_TIP].y < lm[RING_MCP].y,
+            'pinky':  lm[PINKY_TIP].y < lm[PINKY_MCP].y,
+        }
 
     def _pixel(self, lm_point) -> tuple[float, float]:
         return (lm_point.x * self._w, lm_point.y * self._h)
