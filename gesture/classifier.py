@@ -40,6 +40,7 @@ class GestureClassifier:
         self._drag_anchor: Optional[tuple[float, float]] = None
         self._dragging: bool = False
         self._prev_pinch_dist: Optional[float] = None
+        self._prev_spread_dist: Optional[float] = None
 
     def classify(self, hand_landmarks) -> Optional[Gesture]:
         if hand_landmarks is None:
@@ -184,11 +185,11 @@ class GestureClassifier:
                       (self._pixel(lm[t])[1] - wrist_px[1])**2)
             for t in tips
         ) / len(tips)
-        if self._prev_pinch_dist is None:
-            self._prev_pinch_dist = spread
+        if self._prev_spread_dist is None:
+            self._prev_spread_dist = spread
             return None
-        delta = spread - self._prev_pinch_dist
-        self._prev_pinch_dist = spread
+        delta = spread - self._prev_spread_dist
+        self._prev_spread_dist = spread
         threshold = PINCH_MIN_DELTA * max(self._w, self._h)
         if delta < -threshold:
             return Gesture('launchpad')
@@ -210,6 +211,7 @@ class GestureClassifier:
 
         self._dragging = False
         self._drag_anchor = None
+        self._prev_index = None
         return Gesture('drag_end')
 
     def _classify_drag(self, lm: list) -> Optional[Gesture]:
