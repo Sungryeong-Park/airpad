@@ -64,10 +64,26 @@ class GestureClassifier:
         return dirs[round(angle / 45) % 8]
 
     def _detect_shake(self, y_px: float) -> bool:
-        raise NotImplementedError
+        now = time.monotonic() * 1000
+        self._y_history.append((now, y_px))
+        cutoff = now - SHAKE_WINDOW_MS
+        while self._y_history and self._y_history[0][0] < cutoff:
+            self._y_history.popleft()
+        ys = [y for _, y in self._y_history]
+        reversals = sum(
+            1 for i in range(1, len(ys) - 1)
+            if (ys[i] - ys[i - 1]) * (ys[i + 1] - ys[i]) < 0
+        )
+        return reversals >= SHAKE_REVERSAL_COUNT
 
     def _detect_tap(self, bent: bool) -> bool:
-        raise NotImplementedError
+        self._tap_history.append(bent)
+        if len(self._tap_history) < TAP_WINDOW_FRAMES:
+            return False
+        return (not self._tap_history[0]) and self._tap_history[-1]
 
     def _detect_right_tap(self, both_bent: bool) -> bool:
-        raise NotImplementedError
+        self._rtap_history.append(both_bent)
+        if len(self._rtap_history) < TAP_WINDOW_FRAMES:
+            return False
+        return (not self._rtap_history[0]) and self._rtap_history[-1]

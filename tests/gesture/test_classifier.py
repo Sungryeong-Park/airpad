@@ -88,3 +88,35 @@ def test_direction_none_below_threshold():
 
 def test_direction_none_zero():
     assert clf()._direction(0.0, 0.0) is None
+
+
+def test_shake_triggers_on_two_reversals():
+    c = clf()
+    assert c._detect_shake(100) is False
+    assert c._detect_shake(50) is False
+    assert c._detect_shake(100) is False
+    assert c._detect_shake(50) is True   # 2 reversals in window
+
+def test_shake_not_triggered_on_one_reversal():
+    c = clf()
+    assert c._detect_shake(100) is False
+    assert c._detect_shake(50) is False
+    assert c._detect_shake(100) is False   # only 1 reversal — NOT 2
+
+def test_tap_triggers_on_transition():
+    c = clf()
+    for _ in range(3):
+        assert c._detect_tap(False) is False
+    assert c._detect_tap(True) is True
+
+def test_tap_not_triggered_when_already_bent():
+    c = clf()
+    for _ in range(3):
+        c._detect_tap(True)
+    assert c._detect_tap(True) is False
+
+def test_right_tap_triggers():
+    c = clf()
+    for _ in range(3):
+        assert c._detect_right_tap(False) is False
+    assert c._detect_right_tap(True) is True
