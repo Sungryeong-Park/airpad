@@ -120,3 +120,52 @@ def test_right_tap_triggers():
     for _ in range(3):
         assert c._detect_right_tap(False) is False
     assert c._detect_right_tap(True) is True
+
+
+class MockHandLandmarks:
+    def __init__(self, lms):
+        self.landmark = lms
+
+def test_classify_scroll_two_fingers_moving_down():
+    c = clf()
+    lms1 = make_lm({WRIST: (0.5, 0.5, 0), INDEX_TIP: (0.5, 0.1, 0), INDEX_MCP: (0.5, 0.4, 0),
+                    MIDDLE_TIP: (0.5, 0.1, 0), MIDDLE_MCP: (0.5, 0.4, 0),
+                    RING_TIP: (0.5, 0.7, 0), RING_MCP: (0.5, 0.5, 0),
+                    PINKY_TIP: (0.5, 0.7, 0), PINKY_MCP: (0.5, 0.5, 0),
+                    THUMB_TIP: (0.4, 0.5, 0), THUMB_IP: (0.5, 0.5, 0)})
+    c.classify(MockHandLandmarks(lms1))
+    lms2 = make_lm({WRIST: (0.5, 0.56, 0), INDEX_TIP: (0.5, 0.1, 0), INDEX_MCP: (0.5, 0.4, 0),
+                    MIDDLE_TIP: (0.5, 0.1, 0), MIDDLE_MCP: (0.5, 0.4, 0),
+                    RING_TIP: (0.5, 0.7, 0), RING_MCP: (0.5, 0.5, 0),
+                    PINKY_TIP: (0.5, 0.7, 0), PINKY_MCP: (0.5, 0.5, 0),
+                    THUMB_TIP: (0.4, 0.5, 0), THUMB_IP: (0.5, 0.5, 0)})
+    result = c.classify(MockHandLandmarks(lms2))
+    assert result is not None
+    assert result.name == 'scroll'
+    assert result.is_continuous is True
+    assert result.dy > 0
+
+def test_classify_pointer_move():
+    c = clf()
+    lms1 = make_lm({WRIST: (0.5, 0.8, 0),
+                    INDEX_TIP: (0.5, 0.2, 0), INDEX_MCP: (0.5, 0.6, 0),
+                    MIDDLE_TIP: (0.5, 0.85, 0), MIDDLE_MCP: (0.5, 0.7, 0),
+                    RING_TIP: (0.5, 0.85, 0), RING_MCP: (0.5, 0.7, 0),
+                    PINKY_TIP: (0.5, 0.85, 0), PINKY_MCP: (0.5, 0.7, 0),
+                    THUMB_TIP: (0.4, 0.8, 0), THUMB_IP: (0.5, 0.8, 0)})
+    c.classify(MockHandLandmarks(lms1))
+    lms2 = make_lm({WRIST: (0.5, 0.8, 0),
+                    INDEX_TIP: (0.53, 0.2, 0), INDEX_MCP: (0.5, 0.6, 0),
+                    MIDDLE_TIP: (0.5, 0.85, 0), MIDDLE_MCP: (0.5, 0.7, 0),
+                    RING_TIP: (0.5, 0.85, 0), RING_MCP: (0.5, 0.7, 0),
+                    PINKY_TIP: (0.5, 0.85, 0), PINKY_MCP: (0.5, 0.7, 0),
+                    THUMB_TIP: (0.4, 0.8, 0), THUMB_IP: (0.5, 0.8, 0)})
+    result = c.classify(MockHandLandmarks(lms2))
+    assert result is not None
+    assert result.name == 'pointer_move'
+    assert result.is_continuous is True
+    assert result.dx > 0
+
+def test_classify_returns_none_for_no_landmark():
+    c = clf()
+    assert c.classify(None) is None

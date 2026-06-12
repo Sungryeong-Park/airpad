@@ -42,7 +42,43 @@ class GestureClassifier:
         self._prev_pinch_dist: Optional[float] = None
 
     def classify(self, hand_landmarks) -> Optional[Gesture]:
-        raise NotImplementedError
+        if hand_landmarks is None:
+            return None
+        lm = hand_landmarks.landmark
+        states = self._finger_states(lm)
+        count = sum(states.values())
+        wrist_px = self._pixel(lm[WRIST])
+
+        dx, dy = 0.0, 0.0
+        if self._prev_wrist:
+            dx = wrist_px[0] - self._prev_wrist[0]
+            dy = wrist_px[1] - self._prev_wrist[1]
+        self._prev_wrist = wrist_px
+
+        if self._detect_tap(states['index']):
+            self._drag_anchor = None
+            self._dragging = False
+            return Gesture('pointer_click')
+        if self._detect_right_tap(states['index'] and states['middle']):
+            return Gesture('pointer_right_click')
+
+        if count == 0:
+            result = self._classify_drag(lm) if self._dragging or self._drag_anchor else self._classify_fist(dx, dy)
+            return result
+        if count == 1 and states['index']:
+            return self._classify_pointer_move(lm)
+        if count == 2 and states['index'] and states['middle'] and not states['thumb']:
+            return Gesture('scroll', is_continuous=True, dx=dx, dy=dy)
+        if count == 2 and states['thumb'] and states['index'] and not states['middle']:
+            return self._classify_pinch(lm)
+        if (count == 3 and states['middle'] and states['ring'] and states['pinky']
+                and not states['thumb'] and not states['index']):
+            return self._classify_rect_6split(wrist_px, dx, dy)
+        if count == 4 and not states['thumb']:
+            return self._classify_4finger(dx, dy)
+        if count == 5:
+            return self._classify_5finger(lm)
+        return None
 
     def _finger_states(self, lm: list) -> dict[str, bool]:
         return {
@@ -87,3 +123,114 @@ class GestureClassifier:
         if len(self._rtap_history) < TAP_WINDOW_FRAMES:
             return False
         return (not self._rtap_history[0]) and self._rtap_history[-1]
+
+    def _classify_fist(self, dx: float, dy: float) -> Optional[Gesture]:
+        d = self._direction(dx, dy)
+        if d is None:
+            return None
+        mapping = {
+            '←': 'rect_left_half', '→': 'rect_right_half',
+            '↖': 'rect_top_left',  '↗': 'rect_top_right',
+            '↙': 'rect_bottom_left', '↘': 'rect_bottom_right',
+        }
+        name = mapping.get(d)
+        return Gesture(name) if name else None
+
+    def _classify_pinch(self, lm: list) -> Optional[Gesture]:
+        thumb_px = self._pixel(lm[THUMB_TIP])
+        index_px = self._pixel(lm[INDEX_TIP])
+        dist = math.sqrt((thumb_px[0] - index_px[0])**2 + (thumb_px[1] - index_px[1])**2)
+        if self._prev_pinch_dist is None:
+            self._prev_pinch_dist = dist
+            return None
+        delta = dist - self._prev_pinch_dist
+        self._prev_pinch_dist = dist
+        if abs(delta) < PINCH_MIN_DELTA * max(self._w, self._h):
+            return None
+        scale = 1.0 + delta / max(self._w, self._h)
+        return Gesture('zoom', is_continuous=True, scale=scale)
+
+    def _classify_rect_6split(self, wrist_px: tuple, dx: float, dy: float) -> Optional[Gesture]:
+        if self._detect_shake(wrist_px[1]):
+            return Gesture('rect_center_third')
+        d = self._direction(dx, dy)
+        if d is None:
+            return None
+        mapping = {
+            '←': 'rect_first_third',  '→': 'rect_last_third',
+            '↑': 'rect_top_center',   '↓': 'rect_bottom_center',
+            '↖': 'rect_top_left_sixth', '↗': 'rect_top_right_sixth',
+            '↙': 'rect_bottom_left_sixth', '↘': 'rect_bottom_right_sixth',
+        }
+        name = mapping.get(d)
+        return Gesture(name) if name else None
+
+    def _classify_4finger(self, dx: float, dy: float) -> Optional[Gesture]:
+        d = self._direction(dx, dy)
+        if d is None:
+            return None
+        mapping = {
+            '←': 'desktop_left', '→': 'desktop_right',
+            '↑': 'mission_control', '↓': 'expose_close',
+        }
+        name = mapping.get(d)
+        return Gesture(name) if name else None
+
+    def _classify_5finger(self, lm: list) -> Optional[Gesture]:
+        tips = [THUMB_TIP, INDEX_TIP, MIDDLE_TIP, RING_TIP, PINKY_TIP]
+        wrist_px = self._pixel(lm[WRIST])
+        spread = sum(
+            math.sqrt((self._pixel(lm[t])[0] - wrist_px[0])**2 +
+                      (self._pixel(lm[t])[1] - wrist_px[1])**2)
+            for t in tips
+        ) / len(tips)
+        if self._prev_pinch_dist is None:
+            self._prev_pinch_dist = spread
+            return None
+        delta = spread - self._prev_pinch_dist
+        self._prev_pinch_dist = spread
+        threshold = PINCH_MIN_DELTA * max(self._w, self._h)
+        if delta < -threshold:
+            return Gesture('launchpad')
+        if delta > threshold:
+            return Gesture('show_desktop')
+        return None
+
+    def _classify_pointer_move(self, lm: list) -> Optional[Gesture]:
+        index_tip_px = self._pixel(lm[INDEX_TIP])
+
+        if not self._dragging:
+            if self._prev_index is not None:
+                dx = index_tip_px[0] - self._prev_index[0]
+                dy = index_tip_px[1] - self._prev_index[1]
+                self._prev_index = index_tip_px
+                return Gesture('pointer_move', is_continuous=True, dx=dx, dy=dy)
+            self._prev_index = index_tip_px
+            return None
+
+        self._dragging = False
+        self._drag_anchor = None
+        return Gesture('drag_end')
+
+    def _classify_drag(self, lm: list) -> Optional[Gesture]:
+        index_tip_px = self._pixel(lm[INDEX_TIP])
+
+        if self._drag_anchor is None:
+            self._drag_anchor = index_tip_px
+            self._prev_index = index_tip_px
+            return None
+
+        dist = math.sqrt((index_tip_px[0] - self._drag_anchor[0])**2 +
+                         (index_tip_px[1] - self._drag_anchor[1])**2)
+        if not self._dragging and dist > DRAG_MIN_PX:
+            self._dragging = True
+            self._prev_index = index_tip_px
+            return Gesture('drag_start')
+        if self._dragging and self._prev_index is not None:
+            dx = index_tip_px[0] - self._prev_index[0]
+            dy = index_tip_px[1] - self._prev_index[1]
+            self._prev_index = index_tip_px
+            return Gesture('drag_move', is_continuous=True, dx=dx, dy=dy)
+
+        self._prev_index = index_tip_px
+        return None
