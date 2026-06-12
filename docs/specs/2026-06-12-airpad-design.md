@@ -123,14 +123,18 @@ MediaPipe Hands Lite → 21개 랜드마크 좌표
     ↓
 gesture/classifier.py
   - 손가락 상태 (펴짐/접힘) 분류
-  - 손 이동 벡터 계산 (손목 기준 프레임 간 delta)
-  - 제스처 매칭 (룰 기반)
-    ↓
-gesture/debouncer.py
-  - 동일 제스처 연속 실행 방지 (500ms 쿨다운)
+  - 상태 전환 감지 (펴짐→접힘, 접힘→펴짐)
+  - 이동 벡터 계산 (손목 기준 프레임 간 delta)
+  - 방향 판정 (atan2, 8방향 45° 범위, 최소 30px)
+  - 흔들기 감지 (Y축 반전 2회 / 600ms 윈도우)
+  - 탭 감지 (최근 3프레임 롤링 윈도우 내 전환 감지)
+  - 드래그 판정 (접힘 anchor 대비 N픽셀 초과 시)
+  - 제스처 매칭 (룰 기반, 상태 전환 시점에만 단발 실행)
     ↓
 action/executor.py
   - 제스처 → 동작 직결 매핑 (모드 분기 없음)
+  - 연속 제스처 (스크롤/포인터/드래그): 매 프레임 스트리밍
+  - 단발 제스처 (Mission Control/Rectangle/클릭): 전환 시 1회만
     ↓
 trackpad.py / keyboard.py / pointer.py
     ↓
@@ -157,8 +161,7 @@ airpad/
 ├── hotkey.py                # pynput 토글 감지
 ├── vision_worker.py         # subprocess: 카메라 + 제스처 인식 루프
 ├── gesture/
-│   ├── classifier.py        # 손가락 상태 + 방향 분류
-│   └── debouncer.py         # 연속 실행 방지
+│   └── classifier.py        # 손가락 상태, 방향, 흔들기, 탭, 드래그 판정
 ├── action/
 │   ├── executor.py          # 제스처 → 동작 직결 매핑
 │   ├── trackpad.py          # CGEvent 트랙패드 이벤트
@@ -179,11 +182,22 @@ airpad/
 ```python
 CAMERA_RESOLUTION = (320, 240)
 CAMERA_FPS = 15
-MEDIAPIPE_MODEL = "lite"       # lite / full
-GESTURE_DEBOUNCE_MS = 500
+MEDIAPIPE_MODEL = "lite"           # lite / full
 HOTKEY = "<ctrl>+<space>"
-OVERLAY_LEVEL = 0              # 0 / 1 / 2
+OVERLAY_LEVEL = 0                  # 0 / 1 / 2
 PROCESS_NICE = 10
+
+# 방향 판정
+DIRECTION_MIN_PX = 30              # 방향 판정 최소 이동 거리 (픽셀)
+DIRECTION_ZONE_DEG = 45            # 방향당 각도 범위
+
+# 흔들기
+SHAKE_WINDOW_MS = 600              # 흔들기 감지 윈도우
+SHAKE_REVERSAL_COUNT = 2           # 윈도우 내 Y축 반전 횟수
+
+# 탭 / 드래그
+TAP_WINDOW_FRAMES = 3              # 탭 감지 롤링 윈도우 (프레임 수)
+DRAG_MIN_PX = 15                   # 드래그 판정 최소 이동 거리 (픽셀)
 ```
 
 ---
