@@ -55,33 +55,23 @@
 
 ---
 
-## 4. 모드
+## 4. 제스처 매핑
 
-### 모드 전환
+모드 분기 없음 — 제스처 자체가 동작을 결정한다.
 
-메뉴바 아이콘 클릭 → 드롭다운에서 선택:
-- **스와이프 모드** (기본)
-- **포인터 모드**
+### 4-1. 트랙패드 제스처
 
-Rectangle 제스처(주먹, 3손가락)는 스와이프 모드 내에서 항상 사용 가능 — 별도 모드 전환 불필요.
+| 제스처 | 동작 | 실행 방식 |
+|--------|------|-----------|
+| 2 fingers 스크롤 (상/하/좌/우) | 수직/수평 스크롤 | CGEvent (연속) |
+| 2 fingers 핀치 open/close | 확대/축소 | CGEvent (연속) |
+| 4 fingers swipe left/right | 화면 전환 (데스크탑/전체화면 앱) | CGEvent |
+| 4 fingers swipe up | 데스크탑 전체 보기 (Mission Control) | CGEvent |
+| 4 fingers swipe down | 전체 보기 취소 | CGEvent |
+| 5 fingers 모으기 (pinch) | 응용 프로그램 열기 (Launchpad) | CGEvent |
+| 5 fingers 펴기 (spread) | 응용 프로그램 닫기 (Show Desktop) | CGEvent |
 
----
-
-
-### 4-1. 스와이프 모드 (macOS 트랙패드 동일)
-
-| 제스처 | 동작 |
-|--------|------|
-| 2 fingers 스크롤 (상/하/좌/우) | 수직/수평 스크롤 |
-| 2 fingers 핀치 open/close | 확대/축소 |
-| 3 fingers swipe up | Mission Control |
-| 3 fingers swipe down | App Exposé |
-| 3 fingers swipe left/right | 전체화면 앱 전환 |
-| 4 fingers swipe up | Mission Control |
-| 4 fingers swipe down | 데스크탑 전체 보기 |
-| 4 fingers swipe left/right | 데스크탑 전환 |
-
-### 4-2. Rectangle 모드
+### 4-2. Rectangle 창 분할
 
 **2분할 — 주먹(0 fingers) + 스와이프**
 
@@ -99,7 +89,7 @@ Rectangle 제스처(주먹, 3손가락)는 스와이프 모드 내에서 항상 
 | 주먹 + ↙ | 왼쪽 아래 | `^⌥J` |
 | 주먹 + ↘ | 오른쪽 아래 | `^⌥K` |
 
-**6분할 — 3손가락(중지+약지+소지) + 스와이프**
+**6분할 — 3손가락(중지+약지+소지, 엄지+검지 접힘) + 스와이프**
 
 | 제스처 | 동작 | 단축키 |
 |--------|------|--------|
@@ -113,14 +103,14 @@ Rectangle 제스처(주먹, 3손가락)는 스와이프 모드 내에서 항상 
 | 3fingers + ↙ | 아래 왼쪽 1/6 | `^⌥,` |
 | 3fingers + ↘ | 아래 오른쪽 1/6 | `^⌥/` |
 
-### 4-3. 포인터 모드 (마우스 제어)
+### 4-3. 포인터 제스처 (마우스 제어)
 
-| 제스처 | 동작 |
-|--------|------|
-| 검지만 펴고 이동 | 마우스 포인터 이동 |
-| 검지 빠르게 구부렸다 펴기 | 좌클릭 |
-| 검지+중지 빠르게 구부렸다 펴기 | 우클릭 |
-| 검지 구부린 채로 이동 | 드래그 |
+| 제스처 | 동작 | 실행 방식 |
+|--------|------|-----------|
+| 검지만 펴고 이동 | 마우스 포인터 이동 | CGEvent (연속) |
+| 검지 빠르게 구부렸다 펴기 | 좌클릭 | CGEvent |
+| 검지+중지 빠르게 구부렸다 펴기 | 우클릭 | CGEvent |
+| 검지 구부린 채로 이동 | 드래그 | CGEvent (연속) |
 
 ---
 
@@ -140,7 +130,7 @@ gesture/debouncer.py
   - 동일 제스처 연속 실행 방지 (500ms 쿨다운)
     ↓
 action/executor.py
-  - 현재 모드(스와이프/Rectangle/포인터)에 따라 분기
+  - 제스처 → 동작 직결 매핑 (모드 분기 없음)
     ↓
 trackpad.py / keyboard.py / pointer.py
     ↓
@@ -170,7 +160,7 @@ airpad/
 │   ├── classifier.py        # 손가락 상태 + 방향 분류
 │   └── debouncer.py         # 연속 실행 방지
 ├── action/
-│   ├── executor.py          # 모드별 분기
+│   ├── executor.py          # 제스처 → 동작 직결 매핑
 │   ├── trackpad.py          # CGEvent 트랙패드 이벤트
 │   ├── keyboard.py          # Rectangle 단축키 주입
 │   └── pointer.py           # 마우스 포인터/클릭/드래그
@@ -212,10 +202,10 @@ PROCESS_NICE = 10
 
 ## 10. MVP 범위
 
-- [ ] 스와이프 모드 (트랙패드 8개 제스처)
+- [ ] 트랙패드 제스처 (2/4/5 fingers, 7개 동작)
 - [ ] Rectangle 2/4/6분할
-- [ ] 포인터 모드 (이동/좌클릭/우클릭/드래그)
+- [ ] 포인터 제스처 (이동/좌클릭/우클릭/드래그)
 - [ ] 토글 단축키
 - [ ] 시각적 피드백 3레벨
-- [ ] 메뉴바 앱 (상태 표시 + 모드 전환)
+- [ ] 메뉴바 앱 (활성/비활성 상태 표시)
 - [ ] subprocess 격리 + nice +10
