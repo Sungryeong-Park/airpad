@@ -57,7 +57,11 @@ class GestureClassifier:
         return (lm_point.x * self._w, lm_point.y * self._h)
 
     def _direction(self, dx: float, dy: float) -> Optional[str]:
-        raise NotImplementedError
+        if math.sqrt(dx ** 2 + dy ** 2) < DIRECTION_MIN_PX:
+            return None
+        angle = math.degrees(math.atan2(-dy, dx)) % 360
+        dirs = ['→', '↗', '↑', '↖', '←', '↙', '↓', '↘']
+        return dirs[round(angle / 45) % 8]
 
     def _detect_shake(self, y_px: float) -> bool:
         raise NotImplementedError

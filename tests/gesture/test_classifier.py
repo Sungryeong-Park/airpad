@@ -57,3 +57,34 @@ def test_fist_all_curled():
     })
     states = c._finger_states(lms)
     assert not any(states.values())
+
+
+def test_direction_right():
+    assert clf()._direction(50.0, 0.0) == '→'
+
+def test_direction_left():
+    assert clf()._direction(-50.0, 0.0) == '←'
+
+def test_direction_up():
+    assert clf()._direction(0.0, -50.0) == '↑'
+
+def test_direction_down():
+    assert clf()._direction(0.0, 50.0) == '↓'
+
+def test_direction_up_right():
+    assert clf()._direction(40.0, -40.0) == '↗'
+
+def test_direction_up_left():
+    assert clf()._direction(-40.0, -40.0) == '↖'
+
+def test_direction_down_right():
+    assert clf()._direction(40.0, 40.0) == '↘'
+
+def test_direction_down_left():
+    assert clf()._direction(-40.0, 40.0) == '↙'
+
+def test_direction_none_below_threshold():
+    assert clf()._direction(5.0, 3.0) is None
+
+def test_direction_none_zero():
+    assert clf()._direction(0.0, 0.0) is None
