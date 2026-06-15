@@ -34,10 +34,10 @@ _DISPATCH: dict = {
     'rect_bottom_right_sixth':lambda g: rectangle.bottom_right_sixth(),
     # Pointer
     'pointer_move':        lambda g: pointer.move(g.dx, g.dy),
-    'pointer_click':       lambda g: pointer.left_click(),
+    'pointer_click':       lambda g: (pointer.move_absolute(g.x, g.y), pointer.left_click()),
     'pointer_right_click': lambda g: pointer.right_click(),
     'drag_start':          lambda g: pointer.drag_start(),
-    'drag_move':           lambda g: pointer.drag_move(g.dx, g.dy),
+    'drag_move':           lambda g: pointer.drag_move_absolute(g.x, g.y),
     'drag_end':            lambda g: pointer.drag_end(),
 }
 

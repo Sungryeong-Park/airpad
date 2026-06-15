@@ -6,6 +6,20 @@ def _current_pos() -> tuple[float, float]:
     return loc.x, loc.y
 
 
+def _screen_size() -> tuple[int, int]:
+    display = Quartz.CGMainDisplayID()
+    return Quartz.CGDisplayPixelsWide(display), Quartz.CGDisplayPixelsHigh(display)
+
+
+def move_absolute(norm_x: float, norm_y: float) -> None:
+    sw, sh = _screen_size()
+    pt = Quartz.CGPointMake(norm_x * sw, norm_y * sh)
+    event = Quartz.CGEventCreateMouseEvent(
+        None, Quartz.kCGEventMouseMoved, pt, Quartz.kCGMouseButtonLeft
+    )
+    Quartz.CGEventPost(Quartz.kCGHIDEventTap, event)
+
+
 def move(dx: float, dy: float) -> None:
     x, y = _current_pos()
     pt = Quartz.CGPointMake(x + dx, y + dy)
@@ -40,9 +54,9 @@ def drag_start() -> None:
     Quartz.CGEventPost(Quartz.kCGHIDEventTap, e)
 
 
-def drag_move(dx: float, dy: float) -> None:
-    x, y = _current_pos()
-    pt = Quartz.CGPointMake(x + dx, y + dy)
+def drag_move_absolute(norm_x: float, norm_y: float) -> None:
+    sw, sh = _screen_size()
+    pt = Quartz.CGPointMake(norm_x * sw, norm_y * sh)
     e = Quartz.CGEventCreateMouseEvent(
         None, Quartz.kCGEventLeftMouseDragged, pt, Quartz.kCGMouseButtonLeft
     )

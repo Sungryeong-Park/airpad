@@ -12,9 +12,10 @@ import vision_worker
 
 class AirpadApp(rumps.App):
     def __init__(self, queue: multiprocessing.Queue) -> None:
-        super().__init__('🤚', quit_button='종료')
+        super().__init__('✋', quit_button='종료')
         self._queue = queue
-        self._active = False
+        self._active = True
+        self._queue.put('toggle')
 
     @rumps.clicked('활성화/비활성화')
     def toggle_menu(self, _) -> None:
